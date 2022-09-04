@@ -101,7 +101,7 @@ class buddyRigg_Window(object):
         self.orientZ = cmds.radioButton(l='z', cc = self.ctrlOrient)
         cmds.setParent('..')
         
-        cmds.radioCollection(self.orientAxisCollection, edit=True, sl=self.orientY)
+        cmds.radioCollection(self.orientAxisCollection, edit=True, sl=self.orientX)
 
         cmds.columnLayout()
         self.addCtrlButton = cmds.button(l = "Add controls", command = self.addCtrl, w=windowW)
@@ -488,7 +488,8 @@ class buddyRigg_Window(object):
         for i in depthNameList:
             _obj, _depth, _parent = i
             
-            useCustomRadius = self.updateRadiusCheck()
+            isCustomRadius = self.updateRadiusCheck()
+            isConstraint = self.updateConstraintCheck()
             ctrlName = self.updateCtrlNameInput()
             offsetName = self.updateOffsetNameInput()
             orient = self.ctrlOrient()
@@ -526,20 +527,17 @@ class buddyRigg_Window(object):
             rMultiplier = self.updateRadiusFloat()
             ctrlRadius = 1 * rMultiplier
             for target,r in boneDict.items():
-                if useCustomRadius == True:
+                if isCustomRadius == True:
                     oldName = _obj.upper().split('|')[-1]
 
                     n = oldName.find(target.upper())
 
                     if n >= 0:
-                        print('Found name in bone')
-                        print(str(r))
                         ctrlRadius = r * rMultiplier
                         break
                     else:
                         continue
 
-            print(ctrlRadius)
             #Make Control
             cmds.circle(n=ctrl, r=ctrlRadius)
             cmds.select(ctrl + '.cv[0:7]', r=True)
@@ -558,14 +556,18 @@ class buddyRigg_Window(object):
             cmds.matchTransform(offset, _obj, scl=False)
 
             #Set aside for reparenting
-            controlList = controlList + [(offset, _depth, _parent)]
+            controlList = controlList + [(offset, ctrl, _parent, _obj)]
             
         for i in controlList:
-            _offset, _depth, _parent = i
+            _offset, _ctrl, _parent, _bone = i
             
             #Parent Controllers together
             if _parent != '0':
                 cmds.parent(_offset, ctrlName + _parent)
+            
+            #If True, constrain referenced bone to its controller
+            if isConstraint == True:
+                cmds.parentConstraint(_ctrl, _bone)
 
     #-----------------------------------Selection-----------------------------------#
     def selectByType(self, t):
