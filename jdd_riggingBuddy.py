@@ -1,7 +1,7 @@
 #-----------------------------Tested for Maya 2022+-----------------------------#
 #
 #             jdd_riggingBuddy.py 
-#             v0.0.0, last modified 15/08/22
+#             v0.0.1, last modified 11/09/22
 # 
 # MIT License
 # Copyright (c) 2020 Jordan Dion-Duval
@@ -515,15 +515,24 @@ class buddyRigg_Window(object):
         controlList = []
         for i in depthNameList:
             _obj, _depth, _parent = i
-            
+
             isCustomRadius = self.updateRadiusCheck()
             isConstraint = self.updateConstraintCheck()
             ctrlName = self.updateCtrlNameInput()
             offsetName = self.updateOffsetNameInput()
             orient = self.ctrlOrient()
 
-            bone = str(_obj)
+
+            if '|' in _obj:
+                x = _obj.split('|')
+                bone = str(x[-1])
+            else:
+                bone = str(_obj)
+
             ctrl = ctrlName + bone
+            ctrlFind = cmds.ls(str(ctrl))
+            if len(ctrlFind) > 0:
+                ctrl = ctrl + str(len(ctrlFind))
             offset = offsetName + ctrl
             
             #Custom radius for certain bones
@@ -589,8 +598,14 @@ class buddyRigg_Window(object):
         for i in controlList:
             _offset, _ctrl, _parent, _bone = i
             
+            if '|' in _parent:
+                _parent = _parent.split('|')
+                _parent = x[-1]
+
             #Parent Controllers together
-            if _parent != '0':
+            if cmds.ls(str(ctrlName + _parent)) == []:
+                None
+            elif _parent != '0':
                 cmds.parent(_offset, ctrlName + _parent)
             
             #If True, constrain referenced bone to its controller
