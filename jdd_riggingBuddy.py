@@ -37,7 +37,6 @@ RB.UI()
 # maya's script editor. This makes the script a small button in your current shelf
 # so it can easily be accessed later.
 #--------------------------------------------------------------------------------#
-from imp import source_from_cache
 import maya.cmds as cmds
 
 class buddyRigg_Window(object):
@@ -150,19 +149,22 @@ class buddyRigg_Window(object):
         cmds.setParent('..')
         #-----------------------------------UI Tab Pose-----------------------------------#
         poseTab = cmds.columnLayout(cw=windowW)
-        cmds.rowColumnLayout(nc=2, cs = [(1, 0), (2, 50)], cw = [(1, 240), (2, 50)])
+        cmds.columnLayout(cw=windowW)
         #Source/Target Lists
-        cmds.scrollLayout(horizontalScrollBarThickness=16, verticalScrollBarThickness=16)
+        scrollWidth = windowW-10
+        scrollHeight = 300
+        cmds.scrollLayout(w=scrollWidth, h=scrollHeight)
         cmds.rowColumnLayout(nc=2)
          
-        self.sourceList = cmds.textScrollList(allowMultiSelection=True, append=[])
-        self.updateSourceList
-        cmds.textScrollList(append=['other_R'])
-        
-        self.testButton = cmds.button(l = 'test', command = self.runTest)
+        self.sourceList = cmds.textScrollList(w=(scrollWidth)/2-10, h=scrollHeight-10, allowMultiSelection=True, append=[])
+        self.updateSourceList()
+        self.mirrorList = cmds.textScrollList(w=(scrollWidth)/2-10, h=scrollHeight-10, allowMultiSelection=True, append=[])
         cmds.setParent('..')
         cmds.setParent('..')
+
+        self.fetchButton = cmds.button(l = 'Fetch', command = self.fetchSelectionList)
         cmds.setParent('..')
+
         cmds.setParent('..')
         #-----------------------------------UI Tabulation-----------------------------------#
         cmds.tabLayout( tabs, edit=True, tabLabel=((buildTab, 'Build'), (poseTab, 'Pose')) )
@@ -366,17 +368,42 @@ class buddyRigg_Window(object):
 
         return res
 
-
     #-----------------------------------Update Input Queries-----------------------------------#
     def updateSourceList(self, list=[]):
-        oldList = cmds.textScrollList(self.sourceList, query = True, ai = True)
-        cmds.textScrollList(self.sourceList, edit = True, ra = True)
-        if list == []:
-            resList = oldList
-        else:
-            resList = list
-        rowNum = len(resList)
-        cmds.textScrollList(self.sourceList, edit = True, numberOfRows=rowNum, a = resList)
+        if list != []:
+            cmds.textScrollList(self.sourceList, edit = True, ra = True)
+            trueNameList = []
+            for i in list:
+                if cmds.listRelatives(i, f = True) == None:
+                    try:
+                        parent = cmds.listRelatives(i, p = True, f = True)
+                        fullPath = cmds.listRelatives(parent, f = True)
+                        fullPath = fullPath[0].split('|')
+                    except TypeError:
+                        fullPath = i
+                else:
+                    fullPath = cmds.listRelatives(i, f = True)
+                    fullPath = fullPath[0].split('|')[:-1]
+                
+                depth = len(fullPath)
+                trueNameList = trueNameList + [((depth - 2) * '-' + str(i), depth)]
+            
+            # Sorting list by path depth: We don't want our renaming reference to be changed mid-operation,
+            # as it would cause problems down the hierarchy when renaming other objects
+            depthNameList = sorted(trueNameList, key=lambda tup: tup[1], reverse = 0)
+            
+            resList = []
+            for i in depthNameList:
+                _object, _depth = i
+                resList = resList + [_object]
+            rowNum = len(resList)
+
+            if rowNum < 23:
+                newHeight = 290
+            else:
+                newHeight = rowNum * 13 + 13
+            cmds.textScrollList(self.sourceList, edit = True, numberOfRows=rowNum, h=newHeight, a = resList)
+
     def updateCtrlNameInput(self, *args):
         res = cmds.textField(self.ctrlNameInput, query = True, text = True)
         return res
@@ -386,9 +413,10 @@ class buddyRigg_Window(object):
     def updateRadiusFloat(self, *args):
         res = cmds.floatField(self.radiusFloat, query = True, v = True)
         return res
-    def runTest(self, *args):
-        usedList = cmds.ls(sl = True)
-        self.updateSourceList(usedList)
+    def fetchSelectionList(self, *args):
+        selectionList = self.funcSort(self.selectionMethod, 1)
+        
+        self.updateSourceList(selectionList)
 
     #-----------------------------------Radio Collections-----------------------------------#
     def selectionMethod(self, *args):
