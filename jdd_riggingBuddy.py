@@ -1,7 +1,7 @@
 #-----------------------------Tested for Maya 2022+-----------------------------#
 #
 #             jdd_riggingBuddy.py 
-#             v0.0.1, last modified 11/09/22
+#             v0.1.0, last modified 11/09/22
 # 
 # MIT License
 # Copyright (c) 2020 Jordan Dion-Duval
